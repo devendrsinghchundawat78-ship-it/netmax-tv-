@@ -1399,6 +1399,24 @@ internal fun MainAppContent(
                                     requestedSettingsPageName = null
                                 },
                                 onInitialHomeContentRendered = { initialHomeReady = true },
+                                onPlayMovie = { type, id, title, poster, background, logo ->
+                                    onPlay(
+                                        type,
+                                        id,
+                                        id,
+                                        type,
+                                        title,
+                                        logo,
+                                        poster,
+                                        background,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                        null,
+                                    )
+                                },
                             )
                         },
                         onBack = {

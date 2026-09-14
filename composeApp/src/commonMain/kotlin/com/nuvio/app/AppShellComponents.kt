@@ -50,6 +50,7 @@ import com.nuvio.app.features.library.LibrarySortOption
 import com.nuvio.app.features.profiles.NuvioProfile
 import com.nuvio.app.features.profiles.ProfileBackgroundBackdrop
 import com.nuvio.app.features.profiles.ProfileSwitcherTab
+import com.nuvio.app.features.quickwatch.QuickWatchScreen
 import com.nuvio.app.features.search.SearchScreen
 import com.nuvio.app.features.settings.AppBrandWordmark
 import com.nuvio.app.features.settings.SettingsScreen
@@ -133,6 +134,7 @@ internal data class AppTabActions(
     val onFolderClick: ((collectionId: String, folderId: String) -> Unit)? = null,
     val onRequestedSettingsPageConsumed: () -> Unit = {},
     val onInitialHomeContentRendered: () -> Unit = {},
+    val onPlayMovie: ((type: String, id: String, title: String, poster: String?, background: String?, logo: String?) -> Unit)? = null,
 )
 
 @Composable
@@ -174,6 +176,14 @@ internal fun AppTabHost(
                         onPosterLongClick = actions.onPosterLongClick,
                         searchFocusRequestCount = state.searchFocusRequestCount,
                         scrollToTopRequests = requests.searchScrollToTopRequests,
+                    )
+                }
+
+                AppScreenTab.QuickWatch -> {
+                    QuickWatchScreen(
+                        modifier = Modifier.fillMaxSize(),
+                        onPosterClick = actions.onPosterClick ?: {},
+                        onPlayMovie = actions.onPlayMovie,
                     )
                 }
 

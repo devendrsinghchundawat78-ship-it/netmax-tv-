@@ -38,10 +38,12 @@ import dev.chrisbanes.haze.hazeSource
 import dev.chrisbanes.haze.rememberHazeState
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.compose_nav_home
+import nuvio.composeapp.generated.resources.compose_nav_quick_watch
 import nuvio.composeapp.generated.resources.compose_nav_library
 import nuvio.composeapp.generated.resources.compose_nav_profile
 import nuvio.composeapp.generated.resources.compose_nav_search
 import nuvio.composeapp.generated.resources.sidebar_library
+import nuvio.composeapp.generated.resources.sidebar_quick_watch
 import nuvio.composeapp.generated.resources.sidebar_search
 import org.jetbrains.compose.resources.stringResource
 
@@ -77,7 +79,7 @@ internal fun MainTabsDestination(
         val navBarScrollState = rememberNuvioNavBarScrollState()
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
-        val swipeTabs = remember { listOf(AppScreenTab.Home, AppScreenTab.Search, AppScreenTab.Library, AppScreenTab.Settings) }
+        val swipeTabs = remember { listOf(AppScreenTab.Home, AppScreenTab.Search, AppScreenTab.QuickWatch, AppScreenTab.Library, AppScreenTab.Settings) }
         fun switchTabBySwipe(delta: Int) {
             val index = swipeTabs.indexOf(selectedTab)
             val targetIndex = (index + delta).coerceIn(0, swipeTabs.lastIndex)
@@ -104,6 +106,12 @@ internal fun MainTabsDestination(
                             onClick = { onTabSelected(AppScreenTab.Search) },
                             icon = Res.drawable.sidebar_search,
                             contentDescription = stringResource(Res.string.compose_nav_search),
+                        )
+                        NavItem(
+                            selected = selectedTab == AppScreenTab.QuickWatch,
+                            onClick = { onTabSelected(AppScreenTab.QuickWatch) },
+                            icon = Res.drawable.sidebar_quick_watch,
+                            contentDescription = stringResource(Res.string.compose_nav_quick_watch),
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Library,
@@ -191,6 +199,13 @@ internal fun MainTabsDestination(
                             icon = Res.drawable.sidebar_search,
                             contentDescription = stringResource(Res.string.compose_nav_search),
                             label = stringResource(Res.string.compose_nav_search),
+                        )
+                        NavItem(
+                            selected = selectedTab == AppScreenTab.QuickWatch,
+                            onClick = { onTabSelected(AppScreenTab.QuickWatch) },
+                            icon = Res.drawable.sidebar_quick_watch,
+                            contentDescription = stringResource(Res.string.compose_nav_quick_watch),
+                            label = stringResource(Res.string.compose_nav_quick_watch),
                         )
                         NavItem(
                             selected = selectedTab == AppScreenTab.Library,

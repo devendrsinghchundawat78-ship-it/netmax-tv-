@@ -1330,7 +1330,7 @@ object TmdbMetadataService {
         return result
     }
 
-    private suspend fun fetchTrailers(
+    internal suspend fun fetchTrailers(
         tmdbId: Int,
         mediaType: String,
         language: String,
