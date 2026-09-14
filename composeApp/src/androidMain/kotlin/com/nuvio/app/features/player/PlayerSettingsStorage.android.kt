@@ -1116,16 +1116,31 @@ actual object PlayerSettingsStorage {
         saveIosInt(iosGammaKey, value)
     }
 
-    actual fun loadVisualEnhancerEnabled(): Boolean? = loadBoolean(visualEnhancerEnabledKey)
+    actual fun loadVisualEnhancerEnabled(): Boolean? =
+        preferences?.let { sharedPreferences ->
+            val key = ProfileScopedKey.of(visualEnhancerEnabledKey)
+            if (sharedPreferences.contains(key)) {
+                sharedPreferences.getBoolean(key, false)
+            } else {
+                null
+            }
+        }
 
     actual fun saveVisualEnhancerEnabled(enabled: Boolean) {
-        saveBoolean(visualEnhancerEnabledKey, enabled)
+        preferences
+            ?.edit()
+            ?.putBoolean(ProfileScopedKey.of(visualEnhancerEnabledKey), enabled)
+            ?.apply()
     }
 
-    actual fun loadVisualEnhancerMode(): String? = loadString(visualEnhancerModeKey)
+    actual fun loadVisualEnhancerMode(): String? =
+        preferences?.getString(ProfileScopedKey.of(visualEnhancerModeKey), null)
 
     actual fun saveVisualEnhancerMode(mode: String) {
-        saveString(visualEnhancerModeKey, mode)
+        preferences
+            ?.edit()
+            ?.putString(ProfileScopedKey.of(visualEnhancerModeKey), mode)
+            ?.apply()
     }
 
     actual fun exportToSyncPayload(): JsonObject = buildJsonObject {

@@ -1420,7 +1420,7 @@ private class NuvioLibmpvView(
                     mpv.setPropertyInt("brightness", b.toInt())
                     mpv.setPropertyInt("saturation", s.toInt())
                     mpv.setPropertyInt("gamma", g.toInt())
-                    mpv.setPropertyDouble("sharpen", sh)
+                    mpv.setPropertyDouble("sharpen", (sh as Number).toDouble())
                 }
             }.onFailure { Log.w(TAG, "Failed to apply visual enhancer to MPV", it) }
         }
@@ -2067,7 +2067,7 @@ private fun PlayerView.applyVisualEnhancer(
 ) {
     runCatching {
         val textureView = (videoSurfaceView as? TextureView)
-            ?: (findViewById<android.view.View>(androidx.media3.ui.R.id.exo_surface_view) as? TextureView)
+            ?: (findViewById<android.view.View>(R.id.exo_surface_view) as? TextureView)
         if (textureView != null) {
             if (!enabled) {
                 textureView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
