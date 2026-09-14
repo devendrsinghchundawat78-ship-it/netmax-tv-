@@ -961,7 +961,11 @@ private fun ExoPlayerSurface(
     AndroidView(
         modifier = modifier,
         factory = { viewContext ->
-            PlayerView(viewContext).apply {
+            val playerView = runCatching {
+                android.view.LayoutInflater.from(viewContext)
+                    .inflate(R.layout.netmax_player_view, null, false) as PlayerView
+            }.getOrElse { PlayerView(viewContext) }
+            playerView.apply {
                 useController = useNativeController
                 layoutParams = android.view.ViewGroup.LayoutParams(MATCH_PARENT, MATCH_PARENT)
                 player = exoPlayer
@@ -1405,9 +1409,9 @@ private class NuvioLibmpvView(
                     mpv.setPropertyDouble("sharpen", 0.0)
                 } else {
                     val (c, b, s, g, sh) = when (mode) {
-                        VisualEnhancerMode.Vivid -> listOf(15, 4, 25, 3, 1.0)
-                        VisualEnhancerMode.Cinema -> listOf(10, 2, 12, 2, 0.5)
-                        VisualEnhancerMode.Ultra -> listOf(22, 6, 38, 4, 1.5)
+                        VisualEnhancerMode.Vivid -> listOf(20, 6, 35, 4, 1.2)
+                        VisualEnhancerMode.Cinema -> listOf(12, 3, 16, 2, 0.6)
+                        VisualEnhancerMode.Ultra -> listOf(28, 8, 48, 5, 1.8)
                         VisualEnhancerMode.Custom -> listOf(
                             customContrast.toDouble(),
                             customBrightness.toDouble(),
@@ -2066,23 +2070,28 @@ private fun PlayerView.applyVisualEnhancer(
     customSaturation: Int,
 ) {
     runCatching {
-        val textureView = (videoSurfaceView as? TextureView)
+        val targetSurface: android.view.View? = (videoSurfaceView as? TextureView)
             ?: (findViewById<android.view.View>(R.id.exo_surface_view) as? TextureView)
-        if (textureView != null) {
-            if (!enabled) {
-                textureView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null)
-            } else {
-                val matrix = VisualEnhancerMatrix.buildColorMatrix(
-                    mode = mode,
-                    customBrightness = customBrightness,
-                    customContrast = customContrast,
-                    customSaturation = customSaturation,
-                )
-                val paint = Paint().apply {
-                    colorFilter = ColorMatrixColorFilter(matrix)
-                }
-                textureView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, paint)
+            ?: videoSurfaceView
+        if (!enabled) {
+            targetSurface?.setLayerType(android.view.View.LAYER_TYPE_NONE, null)
+            setLayerType(android.view.View.LAYER_TYPE_NONE, null)
+            targetSurface?.invalidate()
+            invalidate()
+        } else {
+            val matrix = VisualEnhancerMatrix.buildColorMatrix(
+                mode = mode,
+                customBrightness = customBrightness,
+                customContrast = customContrast,
+                customSaturation = customSaturation,
+            )
+            val paint = Paint().apply {
+                colorFilter = ColorMatrixColorFilter(matrix)
             }
+            targetSurface?.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, paint)
+            setLayerType(android.view.View.LAYER_TYPE_HARDWARE, paint)
+            targetSurface?.invalidate()
+            invalidate()
         }
     }.onFailure { Log.w(TAG, "Failed to apply visual enhancer to PlayerView", it) }
 }

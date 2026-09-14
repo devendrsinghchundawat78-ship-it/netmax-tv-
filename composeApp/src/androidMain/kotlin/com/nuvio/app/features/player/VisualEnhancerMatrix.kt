@@ -10,13 +10,13 @@ internal object VisualEnhancerMatrix {
         customSaturation: Int = 0,
     ): ColorMatrix {
         val (satFactor, conFactor, briOffset) = when (mode) {
-            VisualEnhancerMode.Vivid -> Triple(1.28f, 1.14f, 6f)
-            VisualEnhancerMode.Cinema -> Triple(1.14f, 1.10f, 3f)
-            VisualEnhancerMode.Ultra -> Triple(1.40f, 1.22f, 8f)
+            VisualEnhancerMode.Vivid -> Triple(1.45f, 1.22f, 10f)
+            VisualEnhancerMode.Cinema -> Triple(1.22f, 1.15f, 4f)
+            VisualEnhancerMode.Ultra -> Triple(1.75f, 1.35f, 16f)
             VisualEnhancerMode.Custom -> {
-                val sat = (1.0f + (customSaturation / 100f)).coerceIn(0.5f, 2.0f)
-                val con = (1.0f + (customContrast / 100f)).coerceIn(0.5f, 2.0f)
-                val bri = customBrightness * 1.5f
+                val sat = (1.0f + (customSaturation / 35f)).coerceIn(0.0f, 3.5f)
+                val con = (1.0f + (customContrast / 35f)).coerceIn(0.2f, 3.5f)
+                val bri = customBrightness * 2.5f
                 Triple(sat, con, bri)
             }
         }
