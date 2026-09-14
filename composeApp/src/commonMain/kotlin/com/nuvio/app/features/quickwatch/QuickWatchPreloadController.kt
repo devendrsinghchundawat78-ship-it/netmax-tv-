@@ -2,6 +2,7 @@ package com.nuvio.app.features.quickwatch
 
 import co.touchlab.kermit.Logger
 import com.nuvio.app.features.trailer.TrailerPlaybackResolver
+import com.nuvio.app.features.trailer.TrailerPlaybackSource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -32,10 +33,14 @@ object QuickWatchPreloadController {
 
     private val activeJobs = mutableMapOf<String, Job>()
     // Lightweight cache of resolved YouTube streams to prevent re-extracting and buffering loops
-    private val resolvedCache = object : LinkedHashMap<String, TrailerPlaybackSource>(25, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, TrailerPlaybackSource>?): Boolean {
-            return size > 30
+    private val resolvedCache = mutableMapOf<String, TrailerPlaybackSource>()
+
+    private fun cacheResolvedStream(id: String, source: TrailerPlaybackSource) {
+        if (resolvedCache.size >= 30) {
+            val firstKey = resolvedCache.keys.firstOrNull()
+            if (firstKey != null) resolvedCache.remove(firstKey)
         }
+        resolvedCache[id] = source
     }
 
     fun onCurrentIndexChanged(currentIndex: Int, items: List<QuickWatchItem>) {
@@ -66,7 +71,7 @@ object QuickWatchPreloadController {
             val isJobRunning = activeJobs[item.id]?.isActive == true
 
             if (!alreadyReady && !isJobRunning) {
-                val cached = synchronized(resolvedCache) { resolvedCache[item.youtubeVideoId] }
+                val cached = resolvedCache[item.youtubeVideoId]
                 if (cached != null) {
                     // Instantly restore from cache without re-extracting or buffering
                     val map = _playbackStates.value.toMutableMap()
@@ -89,9 +94,7 @@ object QuickWatchPreloadController {
             try {
                 val source = TrailerPlaybackResolver.resolveFromYouTubeUrl(item.youtubeUrl)
                 if (source != null && source.videoUrl.isNotBlank()) {
-                    synchronized(resolvedCache) {
-                        resolvedCache[item.youtubeVideoId] = source
-                    }
+                    cacheResolvedStream(item.youtubeVideoId, source)
                     updateState(
                         item.id,
                         QuickWatchPlaybackState(

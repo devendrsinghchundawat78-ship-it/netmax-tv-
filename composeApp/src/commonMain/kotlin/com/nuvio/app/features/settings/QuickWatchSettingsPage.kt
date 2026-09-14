@@ -24,9 +24,9 @@ private fun QuickWatchSettingsSection(isTablet: Boolean) {
         isTablet = isTablet,
     ) {
         SettingsGroup(isTablet = isTablet) {
-            SettingsToggleRow(
+            SettingsSwitchRow(
                 title = "Enable Quick Watch",
-                subtitle = "Display the vertical movie reels feed in navigation and browse trailers",
+                description = "Display the vertical movie reels feed in navigation and browse trailers",
                 checked = settings.enabled,
                 onCheckedChange = { QuickWatchSettingsRepository.setEnabled(it) },
                 isTablet = isTablet,
@@ -35,42 +35,49 @@ private fun QuickWatchSettingsSection(isTablet: Boolean) {
 
         if (settings.enabled) {
             SettingsGroup(isTablet = isTablet) {
-                SettingsSingleSelectRow(
+                SettingsNavigationRow(
                     title = "Overlay Position",
-                    subtitle = when (settings.overlayPosition) {
+                    description = when (settings.overlayPosition) {
                         "center" -> "Bottom Center"
-                        "minimal" -> "Minimal (Hidden Overview)"
+                        "minimal" -> "Minimal (Compact)"
                         else -> "Bottom Left (Default)"
                     },
-                    options = listOf(
-                        "left" to "Bottom Left (Default)",
-                        "center" to "Bottom Center",
-                        "minimal" to "Minimal (Compact)",
-                    ),
-                    selectedKey = settings.overlayPosition,
-                    onOptionSelected = { QuickWatchSettingsRepository.setOverlayPosition(it) },
                     isTablet = isTablet,
+                    onClick = {
+                        val next = when (settings.overlayPosition) {
+                            "left" -> "center"
+                            "center" -> "minimal"
+                            else -> "left"
+                        }
+                        QuickWatchSettingsRepository.setOverlayPosition(next)
+                    },
                 )
 
-                SettingsToggleRow(
+                SettingsGroupDivider(isTablet = isTablet)
+
+                SettingsSwitchRow(
                     title = "Show Movie Story & Synopsis",
-                    subtitle = "Show brief movie overview and genre tags on the reel",
+                    description = "Show brief movie overview and genre tags on the reel",
                     checked = settings.showOverview,
                     onCheckedChange = { QuickWatchSettingsRepository.setShowOverview(it) },
                     isTablet = isTablet,
                 )
 
-                SettingsToggleRow(
+                SettingsGroupDivider(isTablet = isTablet)
+
+                SettingsSwitchRow(
                     title = "Show Action Rail",
-                    subtitle = "Show Like, Comment, Watchlist, and Share buttons on the side",
+                    description = "Show Like, Comment, Watchlist, and Share buttons on the side",
                     checked = settings.showActionRail,
                     onCheckedChange = { QuickWatchSettingsRepository.setShowActionRail(it) },
                     isTablet = isTablet,
                 )
 
-                SettingsToggleRow(
+                SettingsGroupDivider(isTablet = isTablet)
+
+                SettingsSwitchRow(
                     title = "Start Muted",
-                    subtitle = "Mute video audio by default when starting Quick Watch",
+                    description = "Mute video audio by default when starting Quick Watch",
                     checked = settings.autoMute,
                     onCheckedChange = { QuickWatchSettingsRepository.setAutoMute(it) },
                     isTablet = isTablet,

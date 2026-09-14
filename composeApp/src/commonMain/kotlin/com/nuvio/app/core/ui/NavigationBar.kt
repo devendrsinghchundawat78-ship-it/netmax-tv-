@@ -38,6 +38,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -398,8 +399,8 @@ private fun NavItemLabel(
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 10.androidx.compose.ui.unit.sp,
-                lineHeight = 12.androidx.compose.ui.unit.sp,
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             ),
             color = iconColor,
