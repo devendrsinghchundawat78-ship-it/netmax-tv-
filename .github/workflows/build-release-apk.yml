@@ -1,0 +1,127 @@
+name: Build Android Release APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-release-apk:
+    name: Build Release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Guard Against Android SVG Drawables
+        run: bash scripts/check-no-android-svg.sh
+
+      - name: Prepare Keystore and Build Configuration
+        run: |
+          echo "=== Generating Release Signing Keystore ==="
+          if [ -n "${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}" ]; then
+            echo "${{ secrets.NUVIO_RELEASE_KEYSTORE_BASE64 }}" | base64 --decode > release.jks
+            echo "Using keystore from secret"
+          else
+            keytool -genkey -v \
+              -keystore release.jks \
+              -alias netmax \
+              -keyalg RSA \
+              -keysize 2048 \
+              -validity 10000 \
+              -storepass netmaxpassword \
+              -keypass netmaxpassword \
+              -dname "CN=NetMax Release, OU=NetMax, O=NetMax, L=Unknown, ST=Unknown, C=IN"
+            echo "Generated self-signed release keystore"
+          fi
+
+          echo "=== Setting up local.properties ==="
+          if [ -n "${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}" ]; then
+            echo "${{ secrets.NUVIO_LOCAL_PROPERTIES_BASE64 }}" | base64 --decode > local.properties
+            echo "NUVIO_RELEASE_STORE_FILE=release.jks" >> local.properties
+          else
+            cat << 'EOF' > local.properties
+          NUVIO_RELEASE_STORE_FILE=release.jks
+          NUVIO_RELEASE_STORE_PASSWORD=netmaxpassword
+          NUVIO_RELEASE_KEY_ALIAS=netmax
+          NUVIO_RELEASE_KEY_PASSWORD=netmaxpassword
+          TRAKT_CLIENT_ID=
+          TRAKT_CLIENT_SECRET=
+          TRAKT_REDIRECT_URI=nuvio://auth/trakt
+          SIMKL_CLIENT_ID=
+          SIMKL_REDIRECT_URI=nuvio://auth/simkl
+          SIMKL_APP_NAME=netmax
+          EOF
+          fi
+
+      - name: Build Android Full Release APK
+        run: |
+          echo "=== Building Release APK with Gradle ==="
+          ./gradlew :androidApp:assembleFullRelease --stacktrace --no-daemon
+
+      - name: Verify Release APK Output
+        id: apk-check
+        run: |
+          echo "=== Checking Generated Release APK ==="
+          ls -la androidApp/build/outputs/apk/full/release/
+          
+          VERSION=$(grep "MARKETING_VERSION" iosApp/Configuration/Version.xcconfig | cut -d'=' -f2 | tr -d ' ' || echo "3.1.0")
+          mkdir -p release-output
+          MAIN_APK=$(find androidApp/build/outputs/apk/full/release/ -name "*.apk" | head -n 1)
+          if [ -z "$MAIN_APK" ]; then
+            echo "Error: No release APK found!" >&2
+            exit 1
+          fi
+          echo "Selected APK: $MAIN_APK"
+          cp "$MAIN_APK" "release-output/NetMax-v${VERSION}-release.apk"
+          ls -la release-output/
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NetMax-Release-APK
+          path: release-output/NetMax-v*-release.apk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create GitHub Release with APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(grep "MARKETING_VERSION" iosApp/Configuration/Version.xcconfig | cut -d'=' -f2 | tr -d ' ' || echo "3.1.0")
+          TAG_NAME="v${VERSION}-${{ github.run_number }}"
+          RELEASE_TITLE="NetMax v${VERSION} Release (Build ${{ github.run_number }})"
+          
+          echo "Creating Release $TAG_NAME - $RELEASE_TITLE"
+          
+          gh release create "$TAG_NAME" \
+            release-output/NetMax-v*-release.apk \
+            --title "$RELEASE_TITLE" \
+            --notes "### NetMax v${VERSION} Android Release Build
+          
+          **Version:** ${VERSION}
+          **Build Number:** ${{ github.run_number }}
+          **Commit:** ${{ github.sha }}
+          
+          #### What's New:
+          - ✨ **Liquid Glass (Beta)**: Real-time glass blur, specular refraction rim, and fluid design.
+          - 🎬 **Bollywood & Indian Series**: Dedicated home catalog sections.
+          - 🍿 **Universal Scrapers**: NetMax multi-CDN automatic provider support.
+          - 🚀 **Performance**: 60/120fps smooth scrolling with 0 lag or freeze." \
+            --generate-notes=false || true
