@@ -1,10 +1,10 @@
 package com.nuvio.app.features.quickwatch
 
 import co.touchlab.kermit.Logger
-import com.nuvio.app.core.time.CurrentDateProvider
 import com.nuvio.app.features.home.MetaPreview
 import com.nuvio.app.features.tmdb.TmdbHomeCatalogResolver
 import com.nuvio.app.features.tmdb.TmdbMetadataService
+import com.nuvio.app.features.watchprogress.CurrentDateProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
