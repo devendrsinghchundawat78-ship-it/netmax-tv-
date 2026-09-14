@@ -78,6 +78,15 @@ internal actual object DownloadsLiveStatusPlatform {
             .edit()
             .putStringSet(trackedDownloadIdsKey, trackedNow)
             .apply()
+
+        // Background download foreground service & wake lock
+        val activelyDownloadingItem = items.firstOrNull { it.status == DownloadStatus.Downloading }
+        if (activelyDownloadingItem != null) {
+            val foregroundNotif = buildNotification(context, activelyDownloadingItem)
+            DownloadForegroundService.start(context, foregroundNotif, notificationId(activelyDownloadingItem.id))
+        } else {
+            DownloadForegroundService.stop(context)
+        }
     }
 
     private fun buildNotification(context: Context, item: DownloadItem): android.app.Notification {

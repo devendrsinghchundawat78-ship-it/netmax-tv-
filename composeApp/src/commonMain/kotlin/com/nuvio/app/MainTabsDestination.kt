@@ -79,7 +79,20 @@ internal fun MainTabsDestination(
         val navBarScrollState = rememberNuvioNavBarScrollState()
         val navBarHazeState = rememberHazeState()
         val navBarStyleSetting by remember { ThemeSettingsRepository.navBarStyle }.collectAsStateWithLifecycle()
-        val swipeTabs = remember { listOf(AppScreenTab.Home, AppScreenTab.Search, AppScreenTab.QuickWatch, AppScreenTab.Library, AppScreenTab.Settings) }
+        QuickWatchSettingsRepository.ensureLoaded()
+        val quickWatchSettings by QuickWatchSettingsRepository.settings.collectAsStateWithLifecycle()
+        val swipeTabs = remember(quickWatchSettings.enabled) {
+            if (quickWatchSettings.enabled) {
+                listOf(AppScreenTab.Home, AppScreenTab.Search, AppScreenTab.QuickWatch, AppScreenTab.Library, AppScreenTab.Settings)
+            } else {
+                listOf(AppScreenTab.Home, AppScreenTab.Search, AppScreenTab.Library, AppScreenTab.Settings)
+            }
+        }
+        androidx.compose.runtime.LaunchedEffect(quickWatchSettings.enabled, selectedTab) {
+            if (!quickWatchSettings.enabled && selectedTab == AppScreenTab.QuickWatch) {
+                onTabSelected(AppScreenTab.Home)
+            }
+        }
         fun switchTabBySwipe(delta: Int) {
             val index = swipeTabs.indexOf(selectedTab)
             val targetIndex = (index + delta).coerceIn(0, swipeTabs.lastIndex)
@@ -107,12 +120,14 @@ internal fun MainTabsDestination(
                             icon = Res.drawable.sidebar_search,
                             contentDescription = stringResource(Res.string.compose_nav_search),
                         )
-                        NavItem(
-                            selected = selectedTab == AppScreenTab.QuickWatch,
-                            onClick = { onTabSelected(AppScreenTab.QuickWatch) },
-                            icon = Res.drawable.sidebar_quick_watch,
-                            contentDescription = stringResource(Res.string.compose_nav_quick_watch),
-                        )
+                        if (quickWatchSettings.enabled) {
+                            NavItem(
+                                selected = selectedTab == AppScreenTab.QuickWatch,
+                                onClick = { onTabSelected(AppScreenTab.QuickWatch) },
+                                icon = Res.drawable.sidebar_quick_watch,
+                                contentDescription = stringResource(Res.string.compose_nav_quick_watch),
+                            )
+                        }
                         NavItem(
                             selected = selectedTab == AppScreenTab.Library,
                             onClick = { onTabSelected(AppScreenTab.Library) },
@@ -200,13 +215,15 @@ internal fun MainTabsDestination(
                             contentDescription = stringResource(Res.string.compose_nav_search),
                             label = stringResource(Res.string.compose_nav_search),
                         )
-                        NavItem(
-                            selected = selectedTab == AppScreenTab.QuickWatch,
-                            onClick = { onTabSelected(AppScreenTab.QuickWatch) },
-                            icon = Res.drawable.sidebar_quick_watch,
-                            contentDescription = stringResource(Res.string.compose_nav_quick_watch),
-                            label = stringResource(Res.string.compose_nav_quick_watch),
-                        )
+                        if (quickWatchSettings.enabled) {
+                            NavItem(
+                                selected = selectedTab == AppScreenTab.QuickWatch,
+                                onClick = { onTabSelected(AppScreenTab.QuickWatch) },
+                                icon = Res.drawable.sidebar_quick_watch,
+                                contentDescription = stringResource(Res.string.compose_nav_quick_watch),
+                                label = stringResource(Res.string.compose_nav_quick_watch),
+                            )
+                        }
                         NavItem(
                             selected = selectedTab == AppScreenTab.Library,
                             onClick = { onTabSelected(AppScreenTab.Library) },

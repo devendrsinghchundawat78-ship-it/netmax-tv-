@@ -30,6 +30,7 @@ object QuickWatchFeedRepository {
     private var currentPage = 1
     private var isFetching = false
     private val seenVideoIds = mutableSetOf<String>()
+    private val seenTmdbIds = mutableSetOf<Int>()
 
     fun ensureLoaded() {
         if (_feed.value.isEmpty() && !_isLoading.value) {
@@ -80,11 +81,13 @@ object QuickWatchFeedRepository {
                 withContext(Dispatchers.Main) {
                     if (reset) {
                         seenVideoIds.clear()
+                        seenTmdbIds.clear()
                         seenVideoIds.addAll(newItems.map { it.youtubeVideoId })
+                        seenTmdbIds.addAll(newItems.map { it.tmdbId })
                         _feed.value = newItems
                         currentPage = 1
                     } else {
-                        val filtered = newItems.filter { seenVideoIds.add(it.youtubeVideoId) }
+                        val filtered = newItems.filter { seenVideoIds.add(it.youtubeVideoId) && seenTmdbIds.add(it.tmdbId) }
                         _feed.value = _feed.value + filtered
                         currentPage = page
                     }
@@ -129,9 +132,12 @@ object QuickWatchFeedRepository {
 
         val todayIso = CurrentDateProvider.todayIsoDate()
         val items = mutableListOf<QuickWatchItem>()
+        val localSeenTmdb = mutableSetOf<Int>()
 
         for (preview in allPreviews.distinctBy { it.id }) {
             val tmdbId = preview.id.removePrefix("tmdb:").toIntOrNull() ?: continue
+            if (seenTmdbIds.contains(tmdbId) || localSeenTmdb.contains(tmdbId)) continue
+
             val mediaType = if (preview.type == "series" || preview.type == "tv") "tv" else "movie"
 
             val trailers = runCatching {
@@ -145,38 +151,40 @@ object QuickWatchFeedRepository {
             val validVideos = trailers.filter { it.site.equals("YouTube", ignoreCase = true) && it.key.isNotBlank() }
             if (validVideos.isEmpty()) continue
 
-            // Pick up to 2 videos per movie (e.g. trailer + clip/teaser)
-            val selectedVideos = validVideos.take(2)
+            // Pick the single best official trailer or teaser for this movie (never duplicate the same movie)
+            val bestVideo = validVideos.firstOrNull { it.type.equals("Trailer", ignoreCase = true) }
+                ?: validVideos.firstOrNull { it.type.equals("Teaser", ignoreCase = true) }
+                ?: validVideos.first()
+
+            if (seenVideoIds.contains(bestVideo.key)) continue
+
             val releaseYear = preview.releaseInfo?.take(4)
             val isWatchable = preview.releaseInfo?.let { it <= todayIso } ?: true
 
-            for (video in selectedVideos) {
-                if (seenVideoIds.contains(video.key)) continue
-
-                val item = QuickWatchItem(
-                    id = "${video.key}_$tmdbId",
-                    youtubeVideoId = video.key,
-                    youtubeUrl = "https://www.youtube.com/watch?v=${video.key}",
-                    title = video.name.ifBlank { preview.name },
-                    videoType = video.type.ifBlank { "Trailer" },
-                    movieTitle = preview.name,
-                    movieOverview = preview.description.orEmpty(),
-                    moviePoster = preview.poster,
-                    movieBackdrop = preview.banner ?: preview.poster,
-                    movieLogo = preview.logo,
-                    releaseDate = preview.releaseInfo,
-                    releaseYear = releaseYear,
-                    tmdbId = tmdbId,
-                    mediaType = preview.type,
-                    genres = preview.genres,
-                    voteAverage = preview.imdbRating?.toDoubleOrNull(),
-                    isWatchable = isWatchable,
-                    likeCount = (120..4500).random(), // Initial display counter
-                    commentCount = (8..340).random(),
-                    isLiked = _likedItemIds.value.contains(video.key),
-                )
-                items.add(item)
-            }
+            val item = QuickWatchItem(
+                id = "${bestVideo.key}_$tmdbId",
+                youtubeVideoId = bestVideo.key,
+                youtubeUrl = "https://www.youtube.com/watch?v=${bestVideo.key}",
+                title = bestVideo.name.ifBlank { preview.name },
+                videoType = bestVideo.type.ifBlank { "Trailer" },
+                movieTitle = preview.name,
+                movieOverview = preview.description.orEmpty(),
+                moviePoster = preview.poster,
+                movieBackdrop = preview.banner ?: preview.poster,
+                movieLogo = preview.logo,
+                releaseDate = preview.releaseInfo,
+                releaseYear = releaseYear,
+                tmdbId = tmdbId,
+                mediaType = preview.type,
+                genres = preview.genres,
+                voteAverage = preview.imdbRating?.toDoubleOrNull(),
+                isWatchable = isWatchable,
+                likeCount = (120..4500).random(), // Initial display counter
+                commentCount = (8..340).random(),
+                isLiked = _likedItemIds.value.contains(bestVideo.key),
+            )
+            items.add(item)
+            localSeenTmdb.add(tmdbId)
         }
 
         items

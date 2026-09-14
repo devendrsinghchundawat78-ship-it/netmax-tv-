@@ -139,8 +139,8 @@ fun NuvioNavigationBar(
     val bottomSafePadding = navigationBarInsets.asPaddingValues().calculateBottomPadding()
 
     // Dynamic horizontal padding: pill shrinks when labels are hidden — driven by same labelFraction
-    val expandedHorizontalPadding = 28.dp
-    val collapsedHorizontalPadding = 58.dp
+    val expandedHorizontalPadding = 12.dp
+    val collapsedHorizontalPadding = 48.dp
     val horizontalPadding = expandedHorizontalPadding + (collapsedHorizontalPadding - expandedHorizontalPadding) * (1f - labelFraction)
 
     // Outer container — no background, just safe padding
@@ -393,17 +393,19 @@ private fun NavItemLabel(
         modifier = Modifier
             .height(NuvioTokens.Space.s14 * labelFraction)
             .alpha(labelFraction),
+        contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = NuvioTokens.Type.labelXs,
-                lineHeight = NuvioTokens.LineHeight.labelXs,
+                fontSize = 10.androidx.compose.ui.unit.sp,
+                lineHeight = 12.androidx.compose.ui.unit.sp,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             ),
             color = iconColor,
             maxLines = 1,
-            overflow = TextOverflow.Clip,
+            overflow = TextOverflow.Ellipsis,
+            softWrap = false,
         )
     }
 }

@@ -44,27 +44,49 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeEffect
 
 object LiquidGlassDefaults {
-    val BlurRadius: Dp = 24.dp
+    val BlurRadius: Dp = 32.dp
     val PillShape: Shape = RoundedCornerShape(NuvioTokens.Radius.full)
     val CardShape: Shape = RoundedCornerShape(18.dp)
     val ButtonShape: Shape = CircleShape
 
     @Composable
-    fun glassBrush(isLight: Boolean, settings: LiquidGlassSettings): Brush {
-        val vibrancy = (0.85f + settings.vibrancy * 0.15f).coerceIn(0.7f, 1.25f)
-        if (settings.enhancedLiquidGlass) {
+    fun glassBrush(isLight: Boolean, settings: LiquidGlassSettings, dynamicTint: Color? = null): Brush {
+        val vibrancy = (0.85f + settings.vibrancy * 0.15f).coerceIn(0.7f, 1.35f)
+        if (dynamicTint != null) {
+            val tintAlpha = if (isLight) 0.14f * vibrancy else 0.18f * vibrancy
             return if (isLight) {
                 Brush.verticalGradient(
                     listOf(
-                        Color.White.copy(alpha = 0.40f * vibrancy),
-                        Color(0xFFF2F2F7).copy(alpha = 0.28f * vibrancy),
+                        Color.White.copy(alpha = 0.52f * vibrancy),
+                        dynamicTint.copy(alpha = tintAlpha),
+                        Color(0xFFEBEBF5).copy(alpha = 0.35f * vibrancy),
                     ),
                 )
             } else {
                 Brush.verticalGradient(
                     listOf(
-                        Color(0xFF32323C).copy(alpha = 0.26f * vibrancy),
-                        Color(0xFF131318).copy(alpha = 0.38f * vibrancy),
+                        Color(0xFF323242).copy(alpha = 0.30f * vibrancy),
+                        dynamicTint.copy(alpha = tintAlpha),
+                        Color(0xFF101016).copy(alpha = 0.42f * vibrancy),
+                    ),
+                )
+            }
+        }
+        if (settings.enhancedLiquidGlass) {
+            return if (isLight) {
+                Brush.verticalGradient(
+                    listOf(
+                        Color.White.copy(alpha = 0.45f * vibrancy),
+                        Color(0xFFF6F6FC).copy(alpha = 0.30f * vibrancy),
+                        Color(0xFFE5E5EE).copy(alpha = 0.38f * vibrancy),
+                    ),
+                )
+            } else {
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF383848).copy(alpha = 0.30f * vibrancy),
+                        Color(0xFF1E1E28).copy(alpha = 0.24f * vibrancy),
+                        Color(0xFF101016).copy(alpha = 0.40f * vibrancy),
                     ),
                 )
             }
@@ -92,15 +114,15 @@ object LiquidGlassDefaults {
         val base = if (settings.enhancedLiquidGlass) {
             if (isLight) {
                 listOf(
-                    Color.White.copy(alpha = 0.92f),
-                    Color.White.copy(alpha = 0.44f),
-                    Color(0xFFD8D8E0).copy(alpha = 0.28f),
+                    Color.White.copy(alpha = 0.90f),
+                    Color.White.copy(alpha = 0.35f),
+                    Color(0xFFD8D8E5).copy(alpha = 0.20f),
                 )
             } else {
                 listOf(
-                    Color.White.copy(alpha = 0.58f),
-                    Color.White.copy(alpha = 0.20f),
-                    Color.White.copy(alpha = 0.08f),
+                    Color.White.copy(alpha = 0.60f),
+                    Color.White.copy(alpha = 0.18f),
+                    Color.White.copy(alpha = 0.06f),
                 )
             }
         } else {
@@ -119,14 +141,14 @@ object LiquidGlassDefaults {
             }
         }
         if (chroma <= 0.01f) return Brush.verticalGradient(base)
-        val edge = (0.18f * chroma).coerceIn(0f, 0.18f)
+        val edge = (0.22f * chroma).coerceIn(0f, 0.22f)
         return Brush.horizontalGradient(
             listOf(
-                Color(0xFF72D9FF).copy(alpha = edge),
+                Color(0xFF68D8D6).copy(alpha = edge),
                 base[0],
                 base[1],
                 base[2],
-                Color(0xFFFF79D8).copy(alpha = edge),
+                Color(0xFFFF69B4).copy(alpha = edge),
             ),
         )
     }
@@ -135,14 +157,15 @@ object LiquidGlassDefaults {
         val amount = settings.refractionAmount.coerceIn(0f, 1f)
         val height = settings.refractionHeight.coerceIn(0.05f, 1f)
         if (settings.enhancedLiquidGlass) {
-            val tint = if (isLight) Color.White else Color(0xFFF2F8FF)
+            val tint = if (isLight) Color.White else Color(0xFFF0F6FF)
             return Brush.verticalGradient(
                 colorStops = arrayOf(
-                    0f to tint.copy(alpha = 0.36f * amount),
-                    (height * 0.45f) to tint.copy(alpha = 0.12f * amount),
-                    height to tint.copy(alpha = 0.02f * amount),
-                    (height + 0.15f).coerceAtMost(1f) to Color.Transparent,
-                    1f to Color.Transparent,
+                    0f to tint.copy(alpha = 0.42f * amount),
+                    (height * 0.35f).coerceAtMost(0.35f) to tint.copy(alpha = 0.14f * amount),
+                    height to tint.copy(alpha = 0.03f * amount),
+                    (height + 0.20f).coerceAtMost(0.85f) to Color.Transparent,
+                    0.85f to Color.Transparent,
+                    1f to tint.copy(alpha = 0.08f * amount), // ambient bottom bounce
                 ),
             )
         }
@@ -165,6 +188,7 @@ fun Modifier.liquidGlass(
     isEnabled: Boolean = true,
     borderWidth: Dp = 1.dp,
     alphaFactor: Float = 1f,
+    dynamicTint: Color? = null,
 ): Modifier {
     LiquidGlassSettingsRepository.ensureLoaded()
     val settings by LiquidGlassSettingsRepository.uiState.collectAsStateWithLifecycle()
@@ -178,17 +202,17 @@ fun Modifier.liquidGlass(
             .border(borderWidth, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.25f), shape)
     }
 
-    val glassBg = LiquidGlassDefaults.glassBrush(isLight, settings)
+    val glassBg = LiquidGlassDefaults.glassBrush(isLight, settings, dynamicTint)
     val glassBorder = LiquidGlassDefaults.borderBrush(isLight, settings)
     val tintAlpha = (settings.surfaceOpacity * alphaFactor).coerceIn(0f, 1f)
     val depth = (settings.depthEffect * (if (settings.enhancedLiquidGlass) 18f else 14f)).dp
     val blurRadius = if (settings.enhancedLiquidGlass) {
-        (settings.blurRadius * 1.25f).coerceAtLeast(28f).dp
+        (settings.blurRadius * 1.35f).coerceAtLeast(32f).dp
     } else {
         settings.blurRadius.dp
     }
     val noise = if (settings.enhancedLiquidGlass) {
-        0.012f
+        0.010f
     } else {
         (0.01f + settings.vibrancy * 0.015f).coerceIn(0.01f, 0.04f)
     }
@@ -207,6 +231,11 @@ fun Modifier.liquidGlass(
         )
         .background(glassBg, shape)
         .background(settings.surfaceTint.copy(alpha = tintAlpha), shape)
+        .then(
+            if (dynamicTint != null) {
+                Modifier.background(dynamicTint.copy(alpha = (0.12f * alphaFactor).coerceIn(0f, 0.35f)), shape)
+            } else Modifier
+        )
         .background(LiquidGlassDefaults.refractionBrush(settings, isLight), shape)
         .border(borderWidth, glassBorder, shape)
 }
@@ -222,6 +251,7 @@ fun LiquidGlassIconButton(
     size: Dp = 42.dp,
     iconSize: Dp = 20.dp,
     tint: Color? = null,
+    dynamicTint: Color? = null,
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     LiquidGlassSettingsRepository.ensureLoaded()
@@ -238,6 +268,7 @@ fun LiquidGlassIconButton(
         size = size,
         iconSize = iconSize,
         tint = resolvedTint,
+        dynamicTint = dynamicTint,
         interactionSource = interactionSource,
     )
 }
@@ -253,12 +284,18 @@ private fun BoxWithLiquidGlassButton(
     size: Dp,
     iconSize: Dp,
     tint: Color,
+    dynamicTint: Color?,
     interactionSource: MutableInteractionSource,
 ) {
     androidx.compose.foundation.layout.Box(
         modifier = modifier
             .size(size)
-            .liquidGlass(shape = LiquidGlassDefaults.ButtonShape, hazeState = hazeState, isEnabled = isEnabled)
+            .liquidGlass(
+                shape = LiquidGlassDefaults.ButtonShape,
+                hazeState = hazeState,
+                isEnabled = isEnabled,
+                dynamicTint = dynamicTint,
+            )
             .clickable(
                 interactionSource = interactionSource,
                 indication = ripple(bounded = true, radius = size / 2),
@@ -279,6 +316,7 @@ fun LiquidGlassBackButton(
     contentDescription: String? = "Back",
     size: Dp = 42.dp,
     iconSize: Dp = 20.dp,
+    dynamicTint: Color? = null,
 ) {
     LiquidGlassIconButton(
         onClick = onBack,
@@ -289,6 +327,7 @@ fun LiquidGlassBackButton(
         isEnabled = isEnabled,
         size = size,
         iconSize = iconSize,
+        dynamicTint = dynamicTint,
     )
 }
 
@@ -299,6 +338,7 @@ fun LiquidGlassTopBar(
     modifier: Modifier = Modifier,
     hazeState: HazeState? = null,
     isEnabled: Boolean = true,
+    dynamicTint: Color? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     LiquidGlassSettingsRepository.ensureLoaded()
@@ -307,7 +347,12 @@ fun LiquidGlassTopBar(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 8.dp)
-            .liquidGlass(shape = LiquidGlassDefaults.PillShape, hazeState = hazeState, isEnabled = isEnabled)
+            .liquidGlass(
+                shape = LiquidGlassDefaults.PillShape,
+                hazeState = hazeState,
+                isEnabled = isEnabled,
+                dynamicTint = dynamicTint,
+            )
             .padding(horizontal = 8.dp, vertical = 6.dp),
     ) {
         Row(
@@ -321,7 +366,14 @@ fun LiquidGlassTopBar(
                 modifier = Modifier.weight(1f, fill = false),
             ) {
                 if (onBack != null) {
-                    LiquidGlassBackButton(onBack = onBack, hazeState = hazeState, isEnabled = isEnabled, size = 36.dp, iconSize = 18.dp)
+                    LiquidGlassBackButton(
+                        onBack = onBack,
+                        hazeState = hazeState,
+                        isEnabled = isEnabled,
+                        size = 36.dp,
+                        iconSize = 18.dp,
+                        dynamicTint = dynamicTint,
+                    )
                 }
                 Text(
                     text = title,

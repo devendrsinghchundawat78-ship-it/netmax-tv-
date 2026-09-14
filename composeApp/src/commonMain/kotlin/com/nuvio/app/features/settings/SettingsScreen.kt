@@ -704,10 +704,14 @@ private fun MobileSettingsScreen(
                             onAccountClick = onAccountClick,
                             onNetmaxAiClick = onNetmaxAiClick,
                             onSwitchProfileClick = onSwitchProfile,
+                            onQuickWatchClick = { onPageChange(SettingsPage.QuickWatch) },
                             showSupportersContributorsPage = AppFeaturePolicy.supportersContributorsPageEnabled,
                         )
                     }
                 }
+                SettingsPage.QuickWatch -> quickWatchSettingsContent(
+                    isTablet = false,
+                )
                 SettingsPage.Account -> accountSettingsContent(
                     isTablet = false,
                 )
@@ -1128,6 +1132,7 @@ private fun TabletSettingsScreen(
                                 onDownloadsClick = onDownloadsClick,
                                 onAccountClick = { openInlinePage(SettingsPage.Account) },
                                 onSwitchProfileClick = onSwitchProfile,
+                                onQuickWatchClick = { openInlinePage(SettingsPage.QuickWatch) },
                                 showAccountSection = activeCategory == SettingsCategory.Account,
                                 showGeneralSection = activeCategory == SettingsCategory.General,
                                 showAboutSection = activeCategory == SettingsCategory.About,
@@ -1136,6 +1141,9 @@ private fun TabletSettingsScreen(
                             )
                         }
                     }
+                    SettingsPage.QuickWatch -> quickWatchSettingsContent(
+                        isTablet = true,
+                    )
                     SettingsPage.Account -> accountSettingsContent(
                         isTablet = true,
                     )

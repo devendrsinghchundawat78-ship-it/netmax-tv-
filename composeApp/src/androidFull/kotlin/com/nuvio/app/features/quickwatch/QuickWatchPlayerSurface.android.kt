@@ -143,6 +143,7 @@ actual fun QuickWatchPlayerSurface(
             lifecycleOwner.lifecycle.removeObserver(observer)
             exoPlayer.removeListener(listener)
             detachVideoSurface()
+            playerContainer?.keepScreenOn = false
             exoPlayer.release()
         }
     }
@@ -185,6 +186,7 @@ actual fun QuickWatchPlayerSurface(
         },
         update = { container ->
             playerContainer = container
+            container.keepScreenOn = playWhenReady
             if (playWhenReady) {
                 container.attachPlayer(exoPlayer)
             }
@@ -217,12 +219,14 @@ private class QuickWatchTextureContainer(
         attachedPlayer?.clearVideoTextureView(textureView)
         attachedPlayer = player
         player.setVideoTextureView(textureView)
+        keepScreenOn = true
     }
 
     fun detachPlayer(player: ExoPlayer) {
         if (attachedPlayer === player) {
             player.clearVideoTextureView(textureView)
             attachedPlayer = null
+            keepScreenOn = false
         }
     }
 

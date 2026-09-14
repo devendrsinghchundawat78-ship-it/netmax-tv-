@@ -97,13 +97,15 @@ fun QuickWatchScreen(
     val feed by QuickWatchFeedRepository.feed.collectAsStateWithLifecycle()
     val isLoadingFeed by QuickWatchFeedRepository.isLoading.collectAsStateWithLifecycle()
     val playbackStates by QuickWatchPreloadController.playbackStates.collectAsStateWithLifecycle()
+    val settings by QuickWatchSettingsRepository.settings.collectAsStateWithLifecycle()
 
-    var isMuted by rememberSaveable { mutableStateOf(false) }
+    var isMuted by rememberSaveable(settings.autoMute) { mutableStateOf(settings.autoMute) }
     var isPausedManually by remember { mutableStateOf(false) }
     var activeCommentItem by remember { mutableStateOf<QuickWatchItem?>(null) }
     var savedIds by remember { mutableStateOf<Set<String>>(emptySet()) }
 
     LaunchedEffect(Unit) {
+        QuickWatchSettingsRepository.ensureLoaded()
         QuickWatchFeedRepository.ensureLoaded()
     }
 
@@ -172,6 +174,7 @@ fun QuickWatchScreen(
     ) {
         VerticalPager(
             state = pagerState,
+            key = { pageIndex -> feed[pageIndex].id },
             modifier = Modifier.fillMaxSize(),
             beyondViewportPageCount = 1,
         ) { pageIndex ->
@@ -353,79 +356,89 @@ fun QuickWatchScreen(
                     )
                 }
 
-                // Right Action Rail
-                Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .padding(end = 12.dp, bottom = 96.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(18.dp),
-                ) {
-                    // Like Button
-                    ActionRailItem(
-                        icon = if (item.isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                        label = item.likeCount.toString(),
-                        tint = if (item.isLiked) Color(0xFFFF2E56) else Color.White,
-                        onClick = { QuickWatchFeedRepository.toggleLike(item.youtubeVideoId) },
-                    )
+                val isCenter = settings.overlayPosition == "center"
+                val isMinimal = settings.overlayPosition == "minimal"
 
-                    // Comment Button
-                    ActionRailItem(
-                        icon = Icons.AutoMirrored.Rounded.Chat,
-                        label = item.commentCount.toString(),
-                        tint = Color.White,
-                        onClick = { activeCommentItem = item },
-                    )
+                // Right Action Rail (Conditional on Settings)
+                if (settings.showActionRail) {
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 12.dp, bottom = 96.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(18.dp),
+                    ) {
+                        // Like Button
+                        ActionRailItem(
+                            icon = if (item.isLiked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                            label = item.likeCount.toString(),
+                            tint = if (item.isLiked) Color(0xFFFF2E56) else Color.White,
+                            onClick = { QuickWatchFeedRepository.toggleLike(item.youtubeVideoId) },
+                        )
 
-                    // Save / Bookmark to NetMax Library
-                    ActionRailItem(
-                        icon = if (isItemSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
-                        label = "Save",
-                        tint = if (isItemSaved) MaterialTheme.colorScheme.primary else Color.White,
-                        onClick = {
-                            coroutineScope.launch {
-                                LibraryRepository.ensureLoaded()
-                                LibraryRepository.toggleSaved(item.toLibraryItem())
-                                val updated = savedIds.toMutableSet()
-                                if (updated.contains(item.id)) {
-                                    updated.remove(item.id)
-                                    NuvioToastController.show("Removed from Library")
-                                } else {
-                                    updated.add(item.id)
-                                    NuvioToastController.show("Saved to Library")
+                        // Comment Button
+                        ActionRailItem(
+                            icon = Icons.AutoMirrored.Rounded.Chat,
+                            label = item.commentCount.toString(),
+                            tint = Color.White,
+                            onClick = { activeCommentItem = item },
+                        )
+
+                        // Save / Bookmark to NetMax Library
+                        ActionRailItem(
+                            icon = if (isItemSaved) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                            label = "Save",
+                            tint = if (isItemSaved) MaterialTheme.colorScheme.primary else Color.White,
+                            onClick = {
+                                coroutineScope.launch {
+                                    LibraryRepository.ensureLoaded()
+                                    LibraryRepository.toggleSaved(item.toLibraryItem())
+                                    val updated = savedIds.toMutableSet()
+                                    if (updated.contains(item.id)) {
+                                        updated.remove(item.id)
+                                        NuvioToastController.show("Removed from Library")
+                                    } else {
+                                        updated.add(item.id)
+                                        NuvioToastController.show("Saved to Library")
+                                    }
+                                    savedIds = updated
                                 }
-                                savedIds = updated
-                            }
-                        },
-                    )
+                            },
+                        )
 
-                    // Share Button
-                    ActionRailItem(
-                        icon = Icons.Rounded.Share,
-                        label = "Share",
-                        tint = Color.White,
-                        onClick = {
-                            runCatching {
-                                uriHandler.openUri(item.youtubeUrl)
-                            }
-                        },
-                    )
+                        // Share Button
+                        ActionRailItem(
+                            icon = Icons.Rounded.Share,
+                            label = "Share",
+                            tint = Color.White,
+                            onClick = {
+                                runCatching {
+                                    uriHandler.openUri(item.youtubeUrl)
+                                }
+                            },
+                        )
 
-                    // Movie Details Info Icon
-                    ActionRailItem(
-                        icon = Icons.Rounded.Info,
-                        label = "Details",
-                        tint = Color.White,
-                        onClick = { onPosterClick(item.toMetaPreview()) },
-                    )
+                        // Movie Details Info Icon
+                        ActionRailItem(
+                            icon = Icons.Rounded.Info,
+                            label = "Details",
+                            tint = Color.White,
+                            onClick = { onPosterClick(item.toMetaPreview()) },
+                        )
+                    }
                 }
 
                 // Bottom Movie Info & "WATCH NOW" Button
                 Column(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .fillMaxWidth(0.80f)
-                        .padding(start = 16.dp, bottom = 96.dp),
+                        .align(if (isCenter) Alignment.BottomCenter else Alignment.BottomStart)
+                        .fillMaxWidth(if (isCenter) 0.90f else if (settings.showActionRail) 0.80f else 0.94f)
+                        .padding(
+                            start = if (isCenter) 0.dp else 16.dp,
+                            end = if (isCenter) 0.dp else 16.dp,
+                            bottom = 96.dp,
+                        ),
+                    horizontalAlignment = if (isCenter) Alignment.CenterHorizontally else Alignment.Start,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     // Movie Title & Year
@@ -439,59 +452,63 @@ fun QuickWatchScreen(
                         color = Color.White,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        textAlign = if (isCenter) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
                     )
 
-                    // Tags / Chips Row
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                    // Tags / Chips Row (omitted in minimal mode if preferred)
+                    if (!isMinimal) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = if (isCenter) Arrangement.Center else Arrangement.spacedBy(8.dp),
                         ) {
-                            Text(
-                                text = item.videoType.uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                            )
-                        }
-
-                        item.voteAverage?.let { rating ->
                             Surface(
                                 shape = RoundedCornerShape(6.dp),
-                                color = Color.White.copy(alpha = 0.15f),
+                                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
                             ) {
                                 Text(
-                                    text = "★ $rating",
+                                    text = item.videoType.uppercase(),
                                     style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color(0xFFFFD700),
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                )
+                            }
+
+                            item.voteAverage?.let { rating ->
+                                Surface(
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = Color.White.copy(alpha = 0.15f),
+                                ) {
+                                    Text(
+                                        text = "★ $rating",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFFFFD700),
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp),
+                                    )
+                                }
+                            }
+
+                            if (item.genres.isNotEmpty()) {
+                                Text(
+                                    text = item.genres.take(2).joinToString(" • "),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.7f),
+                                    maxLines = 1,
                                 )
                             }
                         }
-
-                        if (item.genres.isNotEmpty()) {
-                            Text(
-                                text = item.genres.take(2).joinToString(" • "),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = Color.White.copy(alpha = 0.7f),
-                                maxLines = 1,
-                            )
-                        }
                     }
 
-                    // Movie Description snippet
-                    if (item.movieOverview.isNotBlank()) {
+                    // Movie Description snippet (conditional on showOverview setting and not minimal)
+                    if (settings.showOverview && !isMinimal && item.movieOverview.isNotBlank()) {
                         Text(
                             text = item.movieOverview,
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.8f),
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
+                            textAlign = if (isCenter) androidx.compose.ui.text.style.TextAlign.Center else androidx.compose.ui.text.style.TextAlign.Start,
                         )
                     }
 
@@ -499,8 +516,9 @@ fun QuickWatchScreen(
 
                     // "WATCH NOW" CTA Button
                     Row(
+                        modifier = if (isCenter) Modifier.fillMaxWidth() else Modifier,
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = if (isCenter) Arrangement.Center else Arrangement.spacedBy(10.dp),
                     ) {
                         Surface(
                             onClick = {

@@ -60,6 +60,11 @@ internal enum class SettingsPage(
         category = SettingsCategory.Account,
         parentPage = Root,
     ),
+    QuickWatch(
+        titleRes = Res.string.compose_nav_quick_watch,
+        category = SettingsCategory.General,
+        parentPage = Root,
+    ),
     SupportersContributors(
         titleRes = Res.string.compose_settings_page_supporters_contributors,
         category = SettingsCategory.About,

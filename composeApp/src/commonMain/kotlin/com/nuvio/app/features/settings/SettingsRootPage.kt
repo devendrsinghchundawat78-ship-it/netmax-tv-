@@ -86,6 +86,7 @@ internal fun LazyListScope.settingsRootContent(
     onAccountClick: () -> Unit,
     onNetmaxAiClick: (() -> Unit)? = null,
     onSwitchProfileClick: (() -> Unit)? = null,
+    onQuickWatchClick: (() -> Unit)? = null,
     showAccountSection: Boolean = true,
     showGeneralSection: Boolean = true,
     showAboutSection: Boolean = true,
@@ -192,6 +193,16 @@ internal fun LazyListScope.settingsRootContent(
                         isTablet = isTablet,
                         onClick = onNotificationsClick,
                     )
+                    if (onQuickWatchClick != null) {
+                        SettingsGroupDivider(isTablet = isTablet)
+                        SettingsNavigationRow(
+                            title = stringResource(Res.string.compose_nav_quick_watch),
+                            description = "Customize vertical movie feed, text layout, and preferences",
+                            icon = Icons.Rounded.AutoAwesome,
+                            isTablet = isTablet,
+                            onClick = onQuickWatchClick,
+                        )
+                    }
                 }
             }
         }

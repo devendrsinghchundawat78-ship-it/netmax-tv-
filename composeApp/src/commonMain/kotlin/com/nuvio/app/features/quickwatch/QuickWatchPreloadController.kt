@@ -31,17 +31,24 @@ object QuickWatchPreloadController {
     val playbackStates: StateFlow<Map<String, QuickWatchPlaybackState>> = _playbackStates.asStateFlow()
 
     private val activeJobs = mutableMapOf<String, Job>()
+    // Lightweight cache of resolved YouTube streams to prevent re-extracting and buffering loops
+    private val resolvedCache = object : LinkedHashMap<String, TrailerPlaybackSource>(25, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, TrailerPlaybackSource>?): Boolean {
+            return size > 30
+        }
+    }
 
     fun onCurrentIndexChanged(currentIndex: Int, items: List<QuickWatchItem>) {
         if (items.isEmpty() || currentIndex !in items.indices) return
 
-        // Compute the strict sliding window: up to 3 videos ahead
-        val targetIndices = (currentIndex until (currentIndex + MAX_READY_COUNT))
-            .filter { it in items.indices }
+        // Compute the sliding window: current, previous, and up to 2 ahead
+        val startIndex = (currentIndex - 1).coerceAtLeast(0)
+        val endIndex = (currentIndex + 2).coerceAtMost(items.lastIndex)
+        val targetIndices = (startIndex..endIndex)
         val targetItems = targetIndices.map { items[it] }
         val targetIds = targetItems.map { it.id }.toSet()
 
-        // 1. Evict any media sources and cancel jobs outside the sliding window
+        // 1. Evict any media sources and cancel extraction jobs outside the active window
         val currentKeys = _playbackStates.value.keys.toSet()
         val keysToRemove = currentKeys - targetIds
         for (key in keysToRemove) {
@@ -59,7 +66,19 @@ object QuickWatchPreloadController {
             val isJobRunning = activeJobs[item.id]?.isActive == true
 
             if (!alreadyReady && !isJobRunning) {
-                startExtraction(item)
+                val cached = synchronized(resolvedCache) { resolvedCache[item.youtubeVideoId] }
+                if (cached != null) {
+                    // Instantly restore from cache without re-extracting or buffering
+                    val map = _playbackStates.value.toMutableMap()
+                    map[item.id] = QuickWatchPlaybackState(
+                        videoUrl = cached.videoUrl,
+                        audioUrl = cached.audioUrl,
+                        isLoading = false,
+                    )
+                    _playbackStates.value = map
+                } else {
+                    startExtraction(item)
+                }
             }
         }
     }
@@ -70,6 +89,9 @@ object QuickWatchPreloadController {
             try {
                 val source = TrailerPlaybackResolver.resolveFromYouTubeUrl(item.youtubeUrl)
                 if (source != null && source.videoUrl.isNotBlank()) {
+                    synchronized(resolvedCache) {
+                        resolvedCache[item.youtubeVideoId] = source
+                    }
                     updateState(
                         item.id,
                         QuickWatchPlaybackState(
@@ -114,6 +136,7 @@ object QuickWatchPreloadController {
     fun clear() {
         activeJobs.values.forEach { it.cancel() }
         activeJobs.clear()
+        synchronized(resolvedCache) { resolvedCache.clear() }
         _playbackStates.value = emptyMap()
     }
 }

@@ -35,6 +35,8 @@ import com.nuvio.app.core.ui.NuvioTokens
 import com.nuvio.app.core.ui.PlatformBackHandler
 import com.nuvio.app.core.ui.nuvio
 import com.nuvio.app.features.auth.AuthScreen
+import com.nuvio.app.features.intro.NetmaxIntroAnimation
+import com.nuvio.app.features.intro.NetmaxIntroState
 import com.nuvio.app.features.membership.MemberAccessRepository
 import com.nuvio.app.features.profiles.AvatarRepository
 import com.nuvio.app.features.profiles.NuvioProfile
@@ -143,6 +145,7 @@ internal fun AppGate(
         )
     }
 
+    var showIntro by rememberSaveable { mutableStateOf(!NetmaxIntroState.hasPlayedIntro) }
     var gateScreen by rememberSaveable { mutableStateOf(AppGateScreen.Loading.name) }
     var editingProfile by remember { mutableStateOf<NuvioProfile?>(null) }
     var autoSkipProfileSelection by rememberSaveable { mutableStateOf(false) }
@@ -555,6 +558,20 @@ internal fun AppGate(
                     AppLoadingContent(modifier = Modifier.fillMaxSize())
                 }
             }
+        }
+
+        androidx.compose.animation.AnimatedVisibility(
+            visible = showIntro,
+            enter = fadeIn(),
+            exit = fadeOut(tween(450)),
+            modifier = Modifier
+                .fillMaxSize()
+                .zIndex(NuvioTokens.Z.dialog + 10f),
+        ) {
+            NetmaxIntroAnimation(
+                onFinished = { showIntro = false },
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
